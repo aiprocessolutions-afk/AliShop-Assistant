@@ -1,6 +1,6 @@
 import express from "express";
 import axios from "axios";
-import cheerio from "cheerio";
+import { load } from "cheerio";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -25,7 +25,7 @@ app.post("/ali/fetch", async (req, res) => {
     });
 
     // 2) пробуем вынуть данные из meta/JSON-LD
-    const $ = cheerio.load(html);
+    const $ = load(html);
 
     // title
     const ogTitle = $('meta[property="og:title"]').attr("content");
