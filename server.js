@@ -12,16 +12,19 @@ app.get("/", (_req, res) => res.json({ ok: true }));
 app.post("/ali/fetch", async (req, res) => {
   try {
     let { url } = req.body || {};
-    if (typeof url !== "string") {
-      return res.status(400).json({ error: "invalid_url_type" });
+    if (typeof url !== 'string') {
+      return res.status(400).json({ error: 'invalid_url_type' });
     }
 
     // 1) Нормализация
-    url = decodeURIComponent(url).trim();
-    // иногда Telegram присылает с угловыми скобками
-    url = url.replace(/^<|>$/g, "");
+    url = decodeURIComponent(url).trim().replace(/^[<«“"]+|[>»”"]+$/g, '');
     if (!/^https?:\/\//i.test(url)) {
-      return res.status(400).json({ error: "invalid_url_protocol" });
+      if (/^(?:[a-z0-9.-]+\.)?aliexpress\.com/i.test(url)
+       || /^a\.aliexpress\.com/i.test(url)
+       || /^s\.click\.aliexpress\.com/i.test(url)) {
+        url = 'https://' + url;
+      } else {
+        return res.status(400).json({ error: 'invalid_url_protocol' });
     }
 
     // 2) User-Agent + опции
