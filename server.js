@@ -16,8 +16,8 @@ app.post("/ali/fetch", async (req, res) => {
       return res.status(400).json({ error: 'invalid_url_type' });
     }
 
-    // 1) Нормализация
-    url = decodeURIComponent(url).trim().replace(/^[<«“"]+|[>»”"]+$/g, '');
+    // 1) Normalize URL
+    url = decodeURIComponent(url).trim().replace(/^[<«""]+|[>»""]+$/g, '');
     if (!/^https?:\/\//i.test(url)) {
       if (/^(?:[a-z0-9.-]+\.)?aliexpress\.com/i.test(url)
        || /^a\.aliexpress\.com/i.test(url)
@@ -25,9 +25,10 @@ app.post("/ali/fetch", async (req, res) => {
         url = 'https://' + url;
       } else {
         return res.status(400).json({ error: 'invalid_url_protocol' });
+      }
     }
 
-    // 2) User-Agent + опции
+    // 2) User-Agent + options
     const headers = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
@@ -36,28 +37,28 @@ app.post("/ali/fetch", async (req, res) => {
     };
     const timeout = 20000;
 
-    // 3) Разворачиваем короткие ссылки AliExpress (a.aliexpress.com/...)
+    // 3) Expand short AliExpress links (a.aliexpress.com/...)
     let finalUrl = url;
     const host = new URL(url).host.toLowerCase();
     if (host === "a.aliexpress.com" || host === "s.click.aliexpress.com") {
-      // отдельный запрос, чтобы получить финальный URL
+      // Separate request to get the final URL
       const r = await axios.get(url, {
         headers,
         timeout,
-        // позволяем редиректы
+        // Allow redirects
         maxRedirects: 5,
-        // не считать 3xx ошибкой
+        // Don't treat 3xx as error
         validateStatus: (s) => s >= 200 && s < 400,
       });
-      // axios сам следует редиректам; финальный урл можно достать так:
+      // axios follows redirects automatically; final url can be extracted like this:
       finalUrl = r.request?.res?.responseUrl || url;
     }
 
-    // 4) Грузим финальную страницу товара
+    // 4) Load the final product page
     const { data: html } = await axios.get(finalUrl, { headers, timeout });
 
-    // 5) Достаём данные (как у тебя было)
-    const $ = cheerio.load(html);
+    // 5) Extract data
+    const $ = load(html);
 
     const ogTitle = $('meta[property="og:title"]').attr("content");
     const title =
@@ -102,7 +103,7 @@ app.post("/ali/fetch", async (req, res) => {
       finalUrl,
     });
   } catch (err) {
-    // более ясное сообщение
+    // More clear error message
     const code = err?.response?.status;
     const msg = err?.message || "unknown";
     return res.status(500).json({
